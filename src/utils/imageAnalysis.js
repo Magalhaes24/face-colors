@@ -46,7 +46,7 @@ function analyzeColorProfile(hex) {
   else if (h >= 280 && h < 330)   warmth = 0.30; // purples / mauves
   else warmth = 0.50;
 
-  return { warmth, depth: 1 - l / 100, saturation: s / 100 };
+  return { warmth, depth: 1 - l / 100, saturation: s / 100, hue: h };
 }
 
 // ── Image sampling: extract skin & hair profile ────────────────────────────
@@ -178,8 +178,14 @@ export function calculateFitScore(colorHex, profile) {
   // When the net undertone gap (after depth forgiveness) exceeds 0.70, cap the score at
   // the avoid ceiling (50) regardless of how well other factors score.
   // Catches clearly-cool colours (icy blues, periwinkles, mints) on clearly-warm profiles and vice versa.
+  // Light saturated pinks/magentas (h ≥ 320°, low depth, high saturation):
+  // perceptually read as cool/icy despite warm hue classification — cap at good ceiling
+  if (c.hue >= 320 && c.depth < 0.40 && c.saturation > 0.35) {
+    return Math.max(5, Math.min(72, Math.round(raw)));
+  }
+
   const adjustedUndertoneGap = Math.max(0, undertoneGap - deepForgiveness);
-  if (adjustedUndertoneGap > 0.70) {
+  if (adjustedUndertoneGap > 0.65) {
     return Math.max(5, Math.min(50, Math.round(raw)));
   }
 
